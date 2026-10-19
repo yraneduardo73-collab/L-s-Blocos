@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Los Blocos — protótipo</title>
+<style>
+  html,body{margin:0;height:100%;overflow:hidden;background:#101722;color:#fff;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+  #game{display:block;width:100%;height:100%}
+  .panel{position:fixed;background:rgba(10,15,24,.78);backdrop-filter:blur(8px);border:1px solid #ffffff22;border-radius:14px;padding:12px 14px;box-shadow:0 8px 30px #0005}
+  #brand{top:14px;left:14px;max-width:290px}
+  #brand strong{font-size:18px;letter-spacing:.5px}
+  #brand small{display:block;color:#b8c7dc;line-height:1.4;margin-top:4px}
+  #help{right:14px;top:14px;max-width:230px;color:#d8e3f4;font-size:12px;line-height:1.6}
+  #help b{color:#fff}
+  #status{left:14px;bottom:14px;color:#c9d8eb;font-size:12px}
+  #cross{position:fixed;left:50%;top:50%;width:10px;height:10px;transform:translate(-50%,-50%);pointer-events:none}
+  #mobileControls{display:none;position:fixed;inset:0;pointer-events:none;touch-action:none}
+  #stickBase{position:absolute;left:20px;bottom:28px;width:126px;height:126px;border-radius:50%;background:#10172288;border:2px solid #ffffff66;pointer-events:auto;touch-action:none}
+  #stickKnob{position:absolute;left:37px;top:37px;width:48px;height:48px;border-radius:50%;background:#dbeafeaa;border:2px solid #fff9;transform:translate(0,0)}
+  .touchBtn{position:absolute;pointer-events:auto;touch-action:none;border:1px solid #ffffff77;background:#101722bb;color:white;border-radius:50%;width:58px;height:58px;font-size:12px;font-weight:800;padding:0}
+  #jumpBtn{right:20px;bottom:30px;width:66px;height:66px;background:#2563ebcc}
+  #breakBtn{right:92px;bottom:104px}
+  #placeBtn{right:20px;bottom:176px}
+  #mobileHint{display:none;position:fixed;top:76px;left:50%;transform:translateX(-50%);background:#101722bb;padding:6px 10px;border-radius:10px;font-size:11px;color:#fff;white-space:nowrap}
+  @media(pointer:coarse){#mobileControls{display:block}#help{display:none}#hotbar{bottom:10px;left:50%;gap:4px}.slot{width:34px;height:34px;font-size:17px}#status{bottom:56px;font-size:10px}#brand{max-width:185px;padding:8px 10px}#brand strong{font-size:14px}#brand small{font-size:10px}}
+  @media(max-width:650px){#help{display:none}#brand{max-width:220px}#hotbar{bottom:12px}.slot{width:36px;height:36px;font-size:18px}}
+  @media(orientation:portrait) and (pointer:coarse){#mobileHint{display:block}}
+  #cross:before,#cross:after{content:"";position:absolute;background:#fff;box-shadow:0 0 3px #000}
+  #cross:before{width:10px;height:2px;top:4px}#cross:after{height:10px;width:2px;left:4px}
+  #hotbar{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);display:flex;gap:7px}
+  .slot{width:46px;height:46px;border:2px solid #ffffff44;border-radius:10px;background:#101722d9;display:grid;place-items:center;font-size:23px;position:relative}
+  .slot.active{border-color:#fff;box-shadow:0 0 0 2px #60a5fa88}
+  .slot span{position:absolute;bottom:1px;right:5px;font-size:10px;color:#dbeafe}
+  #start{position:fixed;inset:0;background:linear-gradient(120deg,#09111de8,#17243bd9);display:flex;align-items:center;justify-content:center;text-align:center;padding:24px}
+  #start .card{max-width:520px;border:1px solid #ffffff25;background:#0b1422e8;padding:28px;border-radius:22px;box-shadow:0 20px 80px #0008}
+  #start h1{margin:0 0 8px;font-size:34px}
+  #start p{color:#c3d0e2;line-height:1.55}
+  button{border:0;border-radius:12px;background:#60a5fa;color:#07111e;font-weight:800;font-size:16px;padding:13px 22px;cursor:pointer}
+  button:hover{background:#93c5fd}
+  @media(max-width:650px){#help{display:none}#brand{max-width:220px}#hotbar{bottom:12px}.slot{width:36px;height:36px;font-size:18px}}
+</style>
+</head>
+<body>
+<canvas id="game"></canvas>
+<div id="brand" class="panel"><strong>🧱 LOS BLOCOS</strong><small>Protótipo original: cidade voxel + exploração e construção. Não é um mod oficial de GTA V ou Minecraft.</small></div>
+<div id="help" class="panel"><b>CONTROLES</b><br>WASD — andar<br>Mouse — olhar ao redor<br>Espaço — pular<br>Botão esquerdo — quebrar bloco<br>Botão direito — colocar bloco<br>1–5 — escolher material<br>Shift — correr<br>Esc — soltar o mouse</div>
+<div id="status" class="panel">Modo exploração · Cidade gerada proceduralmente</div>
+<div id="cross"></div>
+<div id="mobileHint">Dica: vire o celular de lado para jogar melhor</div>
+<div id="mobileControls">
+  <div id="stickBase"><div id="stickKnob"></div></div>
+  <button class="touchBtn" id="jumpBtn">PULAR</button>
+  <button class="touchBtn" id="breakBtn">QUEBRAR</button>
+  <button class="touchBtn" id="placeBtn">COLOCAR</button>
+</div>
+<div id="hotbar">
+ <div class="slot active" data-slot="1">🟩<span>1</span></div><div class="slot" data-slot="2">🟫<span>2</span></div><div class="slot" data-slot="3">🧱<span>3</span></div><div class="slot" data-slot="4">🟨<span>4</span></div><div class="slot" data-slot="5">🪟<span>5</span></div>
+</div>
+<div id="start"><div class="card"><h1>LOS BLOCOS</h1><p>Imagina uma cidade de mundo aberto construída em blocos. Esse é o primeiro protótipo: anda pela cidade, explora as ruas e constrói o que quiser.</p><p><b>Computador:</b> WASD + mouse. Clique em “Entrar no jogo” e depois clique na tela para capturar o mouse.</p><button id="play">Entrar no jogo</button></div></div>
+<script type="module">
+import * as THREE from 'https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js';
+const canvas=document.querySelector('#game');
+const renderer=new THREE.WebGLRenderer({canvas,antialias:false});
+renderer.setPixelRatio(Math.min(devicePixelRatio,1.7));renderer.setSize(innerWidth,innerHeight);
+renderer.shadowMap.enabled=true;renderer.shadowMap.type=THREE.PCFSoftShadowMap;
+renderer.setClearColor(0x8ec5e8);
+const scene=new THREE.Scene();scene.background=new THREE.Color(0x8ec5e8);scene.fog=new THREE.Fog(0x8ec5e8,45,130);
+const camera=new THREE.PerspectiveCamera(74,innerWidth/innerHeight,.1,220);
+const hemi=new THREE.HemisphereLight(0xd8efff,0x536342,2.0);scene.add(hemi);
+const sun=new THREE.DirectionalLight(0xfff0d5,2.3);sun.position.set(-35,60,25);sun.castShadow=true;sun.shadow.mapSize.set(1024,1024);sun.shadow.camera.left=-65;sun.shadow.camera.right=65;sun.shadow.camera.top=65;sun.shadow.camera.bottom=-65;scene.add(sun);
+const mats={
+ grass:new THREE.MeshLambertMaterial({color:0x63a84f}),road:new THREE.MeshLambertMaterial({color:0x343c49}),
+ sidewalk:new THREE.MeshLambertMaterial({color:0xa4a7a3}),brick:new THREE.MeshLambertMaterial({color:0xb9573f}),
+ concrete:new THREE.MeshLambertMaterial({color:0xb8b8ad}),sand:new THREE.MeshLambertMaterial({color:0xd6b65d}),
+ glass:new THREE.MeshLambertMaterial({color:0x5eb7d5}),dark:new THREE.MeshLambertMaterial({color:0x3e5367}),
+ white:new THREE.MeshLambertMaterial({color:0xe9e4d6}),green:new THREE.MeshLambertMaterial({color:0x357c43}),
+ roof:new THREE.MeshLambertMaterial({color:0x4b4b56}),wood:new THREE.MeshLambertMaterial({color:0x8b5b36})
+};
+const materials=[mats.grass,mats.wood,mats.brick,mats.sand,mats.glass];
+const geo=new THREE.BoxGeometry(1,1,1);
+const blocks=new Map(), blockMeshes=[];
+const key=(x,y,z)=>`${x},${y},${z}`;
+function addBlock(x,y,z,mat,editable=true){
+ const k=key(x,y,z);if(blocks.has(k))return;
+ const mesh=new THREE.Mesh(geo,mat);mesh.position.set(x,y,z);mesh.castShadow=true;mesh.receiveShadow=true;mesh.userData={x,y,z,editable};scene.add(mesh);blocks.set(k,mesh);blockMeshes.push(mesh);return mesh;
+}
+function removeBlock(mesh){if(!mesh?.userData?.editable)return;const {x,y,z}=mesh.userData;blocks.delete(key(x,y,z));scene.remove(mesh);const i=blockMeshes.indexOf(mesh);if(i>=0)blockMeshes.splice(i,1);}
+// ground tiles and streets
+for(let x=-48;x<=48;x++)for(let z=-48;z<=48;z++){
+ let road=(Math.abs(x)%16<4)||(Math.abs(z)%16<4);
+ addBlock(x,-1,z,road?mats.road:mats.grass,false);
+ if(road && (Math.abs(x)%16===4||Math.abs(z)%16===4)) addBlock(x,0,z,mats.sidewalk,false);
+}
+// street dashes
+for(let x=-44;x<=44;x++)for(let z=-44;z<=44;z++){
+ if(Math.abs(x)%16===0 && Math.abs(z)%16>4 && Math.abs(z)%16<12 && Math.abs(z)%16<48 && z%4===0)addBlock(x,0,z,mats.sand,false);
+ if(Math.abs(z)%16===0 && Math.abs(x)%16>4 && Math.abs(x)%16<12 && x%4===0)addBlock(x,0,z,mats.sand,false);
+}
+// buildings in city blocks
+let seed=24;function rand(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
+for(let bx=-40;bx<=40;bx+=16)for(let bz=-40;bz<=40;bz+=16){
+ if(Math.abs(bx)<10&&Math.abs(bz)<10)continue;
+ const count=1+Math.floor(rand()*3);
+ for(let n=0;n<count;n++){
+  let cx=bx+5+Math.floor(rand()*6),cz=bz+5+Math.floor(rand()*6);
+  let w=3+Math.floor(rand()*4),d=3+Math.floor(rand()*4),h=3+Math.floor(rand()*13);
+  const wall=[mats.brick,mats.concrete,mats.dark,mats.white][Math.floor(rand()*4)];
+  for(let x=cx;x<cx+w;x++)for(let z=cz;z<cz+d;z++){
+   addBlock(x,0,z,mats.sidewalk,false);
+   for(let y=1;y<=h;y++){
+    let edge=x===cx||x===cx+w-1||z===cz||z===cz+d-1;
+    if(edge){let window=(y>1&&y<h&&((x+z+y)%3!==0));addBlock(x,y,z,window?mats.glass:wall,false);}
+    else if(y===h)addBlock(x,y,z,mats.roof,false);
+   }
+  }
+  for(let x=cx;x<cx+w;x++)for(let z=cz;z<cz+d;z++)addBlock(x,h+1,z,mats.roof,false);
+ }
+}
+// simple voxel trees
+function tree(x,z){addBlock(x,1,z,mats.wood,false);addBlock(x,2,z,mats.wood,false);for(let y=2;y<=4;y++)for(let dx=-1;dx<=1;dx++)for(let dz=-1;dz<=1;dz++)if(Math.abs(dx)+Math.abs(dz)<3)addBlock(x+dx,y,z+dz,mats.green,false);}
+for(let x=-44;x<=44;x+=8)for(let z=-44;z<=44;z+=8)if(Math.abs(x)%16>5&&Math.abs(z)%16>5&&rand()>.56)tree(x,z);
+// player voxel body
+const player=new THREE.Group();scene.add(player);
+function part(w,h,d,mat,x,y,z){let m=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),mat);m.position.set(x,y,z);m.castShadow=true;player.add(m);return m}
+part(.65,.8,.38,new THREE.MeshLambertMaterial({color:0x2563eb}),0,1.15,0);
+part(.48,.48,.45,new THREE.MeshLambertMaterial({color:0xe2b58d}),0,1.82,0);
+part(.5,.18,.48,new THREE.MeshLambertMaterial({color:0x34251e}),0,2.13,0);
+part(.22,.75,.25,new THREE.MeshLambertMaterial({color:0x202b42}),-.18,.38,0);
+part(.22,.75,.25,new THREE.MeshLambertMaterial({color:0x202b42}),.18,.38,0);
+part(.18,.65,.22,new THREE.MeshLambertMaterial({color:0xe2b58d}),-.42,1.18,0);
+part(.18,.65,.22,new THREE.MeshLambertMaterial({color:0xe2b58d}),.42,1.18,0);
+player.position.set(0,0,2);
+let yaw=0,pitch=-.15,velY=0,onGround=true,selected=0;
+const keys={};let locked=false;
+const raycaster=new THREE.Raycaster();raycaster.far=7;
+const center=new THREE.Vector2(0,0);
+function hit(){raycaster.setFromCamera(center,camera);return raycaster.intersectObjects(blockMeshes,false)[0]}
+function updateCamera(){
+ const target=player.position.clone().add(new THREE.Vector3(0,1.45,0));
+ const dist=5.2;
+ const offset=new THREE.Vector3(Math.sin(yaw)*Math.cos(pitch)*dist, -Math.sin(pitch)*dist, Math.cos(yaw)*Math.cos(pitch)*dist);
+ camera.position.copy(target).add(offset);camera.lookAt(target);
+}
+function groundAt(x,z){let gx=Math.round(x),gz=Math.round(z);for(let y=8;y>=-1;y--)if(blocks.has(key(gx,y,gz)))return y+0.5;return -1;}
+function move(dt){
+ let forward=(keys.KeyW?1:0)-(keys.KeyS?1:0)-moveY,side=(keys.KeyD?1:0)-(keys.KeyA?1:0)+moveX;
+ const speed=(keys.ShiftLeft||keys.ShiftRight)?8:5;
+ if(forward||side){let len=Math.hypot(forward,side);forward/=len;side/=len;
+ const dx=(-Math.sin(yaw)*forward+Math.cos(yaw)*side)*speed*dt;
+ const dz=(-Math.cos(yaw)*forward-Math.sin(yaw)*side)*speed*dt;
+ const nx=player.position.x+dx,nz=player.position.z+dz;
+ if(!blocks.has(key(Math.round(nx),1,Math.round(player.position.z)))&&!blocks.has(key(Math.round(nx),2,Math.round(player.position.z))))player.position.x=THREE.MathUtils.clamp(nx,-47,47);
+ if(!blocks.has(key(Math.round(player.position.x),1,Math.round(nz)))&&!blocks.has(key(Math.round(player.position.x),2,Math.round(nz))))player.position.z=THREE.MathUtils.clamp(nz,-47,47);
+ player.rotation.y=yaw;
+ }
+ velY-=20*dt;player.position.y+=velY*dt;
+ let gy=groundAt(player.position.x,player.position.z);
+ if(player.position.y<=gy+0.5){player.position.y=gy+0.5;velY=0;onGround=true;}else onGround=false;
+}
+function blockAction(place){
+ const h=hit();if(!h)return;
+ if(place){
+  const p=h.object.position.clone().add(h.face.normal);
+  const x=Math.round(p.x),y=Math.round(p.y),z=Math.round(p.z);
+  if(y>=0&&y<18&&player.position.distanceTo(new THREE.Vector3(x, y, z))>1.2)addBlock(x,y,z,materials[selected],true);
+ }else removeBlock(h.object);
+}
+document.addEventListener('keydown',e=>{keys[e.code]=true;if(['Space','ArrowUp','ArrowDown'].includes(e.code))e.preventDefault();
+ if(e.code==='Space'&&onGround){velY=8;onGround=false}
+ if(/^Digit[1-5]$/.test(e.code)){selected=Number(e.code.slice(-1))-1;document.querySelectorAll('.slot').forEach((s,i)=>s.classList.toggle('active',i===selected));}
+});
+document.addEventListener('keyup',e=>keys[e.code]=false);
+const isTouch = matchMedia('(pointer: coarse)').matches;
+canvas.addEventListener('click',()=>{if(!isTouch&&!document.pointerLockElement)canvas.requestPointerLock()});
+document.addEventListener('pointerlockchange',()=>locked=!!document.pointerLockElement);
+document.addEventListener('mousemove',e=>{if(!locked)return;yaw-=e.movementX*.0022;pitch=THREE.MathUtils.clamp(pitch+e.movementY*.0022,-.75,.55)});
+document.addEventListener('mousedown',e=>{if(!locked)return;if(e.button===0)blockAction(false);if(e.button===2)blockAction(true)});
+// Touch joystick + drag-to-look for phones/tablets
+let stickPointer=null, lookPointer=null, lookX=0, lookY=0, moveX=0, moveY=0;
+const stick=document.querySelector('#stickBase'), knob=document.querySelector('#stickKnob');
+function stickUpdate(e){
+ const r=stick.getBoundingClientRect(), cx=r.left+r.width/2, cy=r.top+r.height/2;
+ let dx=e.clientX-cx,dy=e.clientY-cy,lim=42,len=Math.hypot(dx,dy);
+ if(len>lim){dx=dx/len*lim;dy=dy/len*lim}
+ knob.style.transform=`translate(${dx}px,${dy}px)`;moveX=dx/lim;moveY=dy/lim;
+}
+stick.addEventListener('pointerdown',e=>{e.preventDefault();stickPointer=e.pointerId;stick.setPointerCapture(e.pointerId);stickUpdate(e)});
+stick.addEventListener('pointermove',e=>{if(e.pointerId===stickPointer){e.preventDefault();stickUpdate(e)}});
+function resetStick(){stickPointer=null;moveX=moveY=0;knob.style.transform='translate(0,0)'}
+stick.addEventListener('pointerup',resetStick);stick.addEventListener('pointercancel',resetStick);
+canvas.addEventListener('pointerdown',e=>{if(!isTouch||e.pointerType!=='touch')return;lookPointer=e.pointerId;lookX=e.clientX;lookY=e.clientY});
+canvas.addEventListener('pointermove',e=>{if(!isTouch||e.pointerId!==lookPointer)return;const dx=e.clientX-lookX,dy=e.clientY-lookY;lookX=e.clientX;lookY=e.clientY;yaw-=dx*.006;pitch=THREE.MathUtils.clamp(pitch+dy*.006,-.75,.55)});
+canvas.addEventListener('pointerup',e=>{if(e.pointerId===lookPointer)lookPointer=null});
+canvas.addEventListener('pointercancel',e=>{if(e.pointerId===lookPointer)lookPointer=null});
+document.querySelector('#jumpBtn').addEventListener('pointerdown',e=>{e.preventDefault();if(onGround){velY=8;onGround=false}});
+document.querySelector('#breakBtn').addEventListener('pointerdown',e=>{e.preventDefault();blockAction(false)});
+document.querySelector('#placeBtn').addEventListener('pointerdown',e=>{e.preventDefault();blockAction(true)});
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.querySelector('#play').addEventListener('click',()=>{document.querySelector('#start').style.display='none';if(!isTouch)canvas.requestPointerLock()});
+document.querySelectorAll('.slot').forEach((s,i)=>s.addEventListener('click',()=>{selected=i;document.querySelectorAll('.slot').forEach((q,j)=>q.classList.toggle('active',i===j))}));
+addEventListener('resize',()=>{camera.aspect=innerWidth/innerHeight;camera.updateProjectionMatrix();renderer.setSize(innerWidth,innerHeight)});
+let last=performance.now();
+function loop(now){requestAnimationFrame(loop);const dt=Math.min((now-last)/1000,.04);last=now;move(dt);updateCamera();renderer.render(scene,camera)}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
